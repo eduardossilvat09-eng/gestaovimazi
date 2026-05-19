@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-yellow: #F4C542;
+  --color-black: #111111;
+  --color-purple: #C7A6FF;
+  --color-white: #FFFFFF;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #111111;
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+}
