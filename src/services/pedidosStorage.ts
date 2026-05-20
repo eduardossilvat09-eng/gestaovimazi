@@ -2,12 +2,14 @@ import { supabase } from "../lib/supabase";
 
 import type { Pedido } from "../types/Pedido";
 
+const TABLE = "pedidos";
+
 export async function getPedidos() {
   const { data, error } =
     await supabase
-      .from("pedidos")
+      .from(TABLE)
       .select("*")
-      .order("data_pedido", {
+      .order("created_at", {
         ascending: false,
       });
 
@@ -17,33 +19,20 @@ export async function getPedidos() {
     return [];
   }
 
-  return (
-    data.map((item) => ({
-      id: item.id,
+  return data as Pedido[];
+}
 
-      cliente: item.cliente,
+export async function savePedidos(
+  pedidos: Pedido[]
+) {
+  const { error } =
+    await supabase
+      .from(TABLE)
+      .upsert(pedidos);
 
-      cidade: item.cidade,
-
-      dataPedido:
-        item.data_pedido,
-
-      dataEmail:
-        item.data_email,
-
-      quantidadePneus:
-        item.quantidade_pneus,
-
-      faturado:
-        item.faturado,
-
-      dataFaturamento:
-        item.data_faturamento,
-
-      entregueFinalizado:
-        item.entregue_finalizado,
-    })) || []
-  );
+  if (error) {
+    console.log(error);
+  }
 }
 
 export async function criarPedido(
@@ -51,32 +40,8 @@ export async function criarPedido(
 ) {
   const { error } =
     await supabase
-      .from("pedidos")
-      .insert({
-        id: pedido.id,
-
-        cliente: pedido.cliente,
-
-        cidade: pedido.cidade,
-
-        data_pedido:
-          pedido.dataPedido,
-
-        data_email:
-          pedido.dataEmail,
-
-        quantidade_pneus:
-          pedido.quantidadePneus,
-
-        faturado:
-          pedido.faturado,
-
-        data_faturamento:
-          pedido.dataFaturamento,
-
-        entregue_finalizado:
-          pedido.entregueFinalizado,
-      });
+      .from(TABLE)
+      .insert(pedido);
 
   if (error) {
     console.log(error);
@@ -88,30 +53,8 @@ export async function atualizarPedido(
 ) {
   const { error } =
     await supabase
-      .from("pedidos")
-      .update({
-        cliente: pedido.cliente,
-
-        cidade: pedido.cidade,
-
-        data_pedido:
-          pedido.dataPedido,
-
-        data_email:
-          pedido.dataEmail,
-
-        quantidade_pneus:
-          pedido.quantidadePneus,
-
-        faturado:
-          pedido.faturado,
-
-        data_faturamento:
-          pedido.dataFaturamento,
-
-        entregue_finalizado:
-          pedido.entregueFinalizado,
-      })
+      .from(TABLE)
+      .update(pedido)
       .eq("id", pedido.id);
 
   if (error) {
@@ -124,15 +67,11 @@ export async function excluirPedido(
 ) {
   const { error } =
     await supabase
-      .from("pedidos")
+      .from(TABLE)
       .delete()
       .eq("id", id);
 
   if (error) {
     console.log(error);
   }
-}
-
-export async function savePedidos() {
-  return;
 }
