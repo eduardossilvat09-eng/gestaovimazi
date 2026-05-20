@@ -1,37 +1,108 @@
 import { useEffect, useState } from "react";
-import { Trash2, Pencil } from "lucide-react";
+
+import {
+  Trash2,
+  Pencil,
+} from "lucide-react";
 
 import type { Pedido } from "../types/Pedido";
 
 import {
   getPedidos,
-  savePedidos,
+  criarPedido,
+  atualizarPedido,
+  excluirPedido as excluirPedidoStorage,
 } from "../services/pedidosStorage";
 
 export default function Pedidos() {
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [pedidos, setPedidos] =
+    useState<Pedido[]>([]);
 
-  const [cliente, setCliente] = useState("");
-  const [cidade, setCidade] = useState("");
-
-  const [dataPedido, setDataPedido] =
-    useState<string>("");
-
-  const [dataEmail, setDataEmail] =
-    useState<string>("");
-
-  const [quantidadePneus, setQuantidadePneus] =
+  const [cliente, setCliente] =
     useState("");
 
-  const [observacao, setObservacao] = useState("");
+  const [cidade, setCidade] =
+    useState("");
+
+  const [
+    dataPedido,
+    setDataPedido,
+  ] = useState<string>("");
+
+  const [
+    dataEmail,
+    setDataEmail,
+  ] = useState<string>("");
+
+  const [
+    quantidadePneus,
+    setQuantidadePneus,
+  ] = useState("");
+
+  const [
+    observacao,
+    setObservacao,
+  ] = useState("");
 
   useEffect(() => {
-    setPedidos(getPedidos());
+    carregarPedidos();
   }, []);
 
-  function criarPedido() {
+  async function carregarPedidos() {
+    const pedidosStorage =
+      await getPedidos();
+
+    const pedidosFormatados: Pedido[] =
+      pedidosStorage.map(
+        (pedido: any) => ({
+          id: pedido.id,
+
+          cliente:
+            pedido.cliente || "",
+
+          cidade:
+            pedido.cidade || "",
+
+          dataPedido:
+            pedido.dataPedido || "",
+
+          dataEmail:
+            pedido.dataEmail || "",
+
+          quantidadePneus:
+            Number(
+              pedido.quantidadePneus || 0
+            ),
+
+          faturado:
+            pedido.faturado || false,
+
+          prioridade:
+            pedido.prioridade || false,
+
+          observacao:
+            pedido.observacao || "",
+
+          dataFaturamento:
+            pedido.dataFaturamento || "",
+
+          entregueFinalizado:
+            pedido.entregueFinalizado ||
+            false,
+        })
+      );
+
+    setPedidos(
+      pedidosFormatados
+    );
+  }
+
+  async function handleCriarPedido() {
     if (!cliente || !cidade) {
-      alert("Preencha os campos obrigatórios");
+      alert(
+        "Preencha os campos obrigatórios"
+      );
+
       return;
     }
 
@@ -49,30 +120,32 @@ export default function Pedidos() {
       ),
 
       faturado: false,
+
       prioridade: false,
 
       observacao,
 
       dataFaturamento: "",
+
+      entregueFinalizado: false,
     };
 
-    const novosPedidos = [
-      novoPedido,
-      ...pedidos,
-    ];
+    await criarPedido(
+      novoPedido
+    );
 
-    setPedidos(novosPedidos);
-
-    savePedidos(novosPedidos);
+    await carregarPedidos();
 
     limparFormulario();
   }
 
   function limparFormulario() {
     setCliente("");
+
     setCidade("");
 
     setDataPedido("");
+
     setDataEmail("");
 
     setQuantidadePneus("");
@@ -80,76 +153,117 @@ export default function Pedidos() {
     setObservacao("");
   }
 
-  function excluirPedido(id: string) {
-    const novosPedidos = pedidos.filter(
-      (pedido) => pedido.id !== id
+  async function excluirPedido(
+    id: string
+  ) {
+    await excluirPedidoStorage(
+      id
     );
 
-    setPedidos(novosPedidos);
-
-    savePedidos(novosPedidos);
+    await carregarPedidos();
   }
 
-  function togglePrioridade(id: string) {
-    const novosPedidos = pedidos.map((pedido) => {
-      if (pedido.id === id) {
-        return {
-          ...pedido,
-          prioridade: !pedido.prioridade,
-        };
-      }
+  async function togglePrioridade(
+    pedido: Pedido
+  ) {
+    const pedidoAtualizado = {
+      ...pedido,
 
-      return pedido;
-    });
+      prioridade:
+        !pedido.prioridade,
+    };
 
-    setPedidos(novosPedidos);
+    await atualizarPedido(
+      pedidoAtualizado
+    );
 
-    savePedidos(novosPedidos);
+    setPedidos((prev) =>
+      prev.map((item) =>
+        item.id === pedido.id
+          ? pedidoAtualizado
+          : item
+      )
+    );
   }
 
-  function toggleFaturado(id: string) {
-    const novosPedidos = pedidos.map((pedido) => {
-      if (pedido.id === id) {
-        if (!pedido.dataFaturamento) {
-          alert(
-            "Preencha a data de faturamento"
-          );
+  async function toggleFaturado(
+    pedido: Pedido
+  ) {
+    if (
+      !pedido.dataFaturamento
+    ) {
+      alert(
+        "Preencha a data de faturamento"
+      );
 
-          return pedido;
-        }
+      return;
+    }
 
-        return {
-          ...pedido,
-          faturado: !pedido.faturado,
-        };
-      }
+    const pedidoAtualizado = {
+      ...pedido,
 
-      return pedido;
-    });
+      faturado:
+        !pedido.faturado,
+    };
 
-    setPedidos(novosPedidos);
+    await atualizarPedido(
+      pedidoAtualizado
+    );
 
-    savePedidos(novosPedidos);
+    setPedidos((prev) =>
+      prev.map((item) =>
+        item.id === pedido.id
+          ? pedidoAtualizado
+          : item
+      )
+    );
   }
 
-  function atualizarDataFaturamento(
-    id: string,
+  async function atualizarDataFaturamento(
+    pedido: Pedido,
     valor: string
   ) {
-    const novosPedidos = pedidos.map((pedido) => {
-      if (pedido.id === id) {
-        return {
-          ...pedido,
-          dataFaturamento: valor,
-        };
-      }
+    const pedidoAtualizado = {
+      ...pedido,
 
-      return pedido;
-    });
+      dataFaturamento:
+        valor,
+    };
 
-    setPedidos(novosPedidos);
+    setPedidos((prev) =>
+      prev.map((item) =>
+        item.id === pedido.id
+          ? pedidoAtualizado
+          : item
+      )
+    );
 
-    savePedidos(novosPedidos);
+    await atualizarPedido(
+      pedidoAtualizado
+    );
+  }
+
+  async function atualizarObservacao(
+    pedido: Pedido,
+    valor: string
+  ) {
+    const pedidoAtualizado = {
+      ...pedido,
+
+      observacao: valor,
+    };
+
+    setPedidos((prev) =>
+      prev.map((item) =>
+        item.id === pedido.id
+          ? pedidoAtualizado
+          : item
+      )
+    );
+
+    await atualizarPedido(
+      pedidoAtualizado
+    );
   }
 
   return (
@@ -178,7 +292,9 @@ export default function Pedidos() {
               type="text"
               value={cliente}
               onChange={(e) =>
-                setCliente(e.target.value)
+                setCliente(
+                  e.target.value
+                )
               }
               className="
                 bg-black
@@ -205,7 +321,9 @@ export default function Pedidos() {
               type="text"
               value={cidade}
               onChange={(e) =>
-                setCidade(e.target.value)
+                setCidade(
+                  e.target.value
+                )
               }
               className="
                 bg-black
@@ -230,8 +348,11 @@ export default function Pedidos() {
 
             <input
               type="datetime-local"
+              value={dataPedido}
               onChange={(e) =>
-                setDataPedido(e.target.value)
+                setDataPedido(
+                  e.target.value
+                )
               }
               className="
                 bg-black
@@ -256,8 +377,11 @@ export default function Pedidos() {
 
             <input
               type="datetime-local"
+              value={dataEmail}
               onChange={(e) =>
-                setDataEmail(e.target.value)
+                setDataEmail(
+                  e.target.value
+                )
               }
               className="
                 bg-black
@@ -312,7 +436,9 @@ export default function Pedidos() {
             <textarea
               value={observacao}
               onChange={(e) =>
-                setObservacao(e.target.value)
+                setObservacao(
+                  e.target.value
+                )
               }
               className="
                 bg-black
@@ -332,7 +458,9 @@ export default function Pedidos() {
 
         {/* Botão */}
         <button
-          onClick={criarPedido}
+          onClick={
+            handleCriarPedido
+          }
           className="
             mt-6
             bg-[#F4C542]
@@ -352,217 +480,223 @@ export default function Pedidos() {
       {/* Lista */}
       <div className="space-y-5">
         {pedidos
-          .filter((pedido) => !pedido.faturado)
+          .filter(
+            (pedido) =>
+              !pedido.faturado
+          )
           .map((pedido) => (
-          <div
-            key={pedido.id}
-            className="
-              bg-zinc-900
-              border
-              border-zinc-800
-              rounded-2xl
-              p-6
-            "
-          >
-            {/* Topo */}
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-bold">
-                    {pedido.cliente}
-                  </h2>
+            <div
+              key={pedido.id}
+              className="
+                bg-zinc-900
+                border
+                border-zinc-800
+                rounded-2xl
+                p-6
+              "
+            >
+              {/* Topo */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold">
+                      {
+                        pedido.cliente
+                      }
+                    </h2>
 
-                  {pedido.prioridade && (
-                    <span
-                      className="
-                        bg-red-500/20
-                        text-red-400
-                        text-xs
-                        px-3
-                        py-1
-                        rounded-full
-                      "
-                    >
-                      PRIORIDADE
-                    </span>
-                  )}
+                    {pedido.prioridade && (
+                      <span
+                        className="
+                          bg-red-500/20
+                          text-red-400
+                          text-xs
+                          px-3
+                          py-1
+                          rounded-full
+                        "
+                      >
+                        PRIORIDADE
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-zinc-400 mt-1">
+                    {pedido.cidade}
+                  </p>
                 </div>
 
-                <p className="text-zinc-400 mt-1">
-                  {pedido.cidade}
-                </p>
-              </div>
-
-              {/* Botões */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() =>
-                    excluirPedido(pedido.id)
-                  }
-                  className="
-                    bg-red-500/20
-                    hover:bg-red-500/40
-                    transition
-                    p-3
-                    rounded-xl
-                  "
-                >
-                  <Trash2 size={18} />
-                </button>
-
-                <button
-                  className="
-                    bg-[#C7A6FF]/20
-                    hover:bg-[#C7A6FF]/40
-                    transition
-                    p-3
-                    rounded-xl
-                  "
-                >
-                  <Pencil size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Dados */}
-            <div className="grid grid-cols-3 gap-5 mt-6">
-              <div>
-                <p className="text-zinc-500 text-sm">
-                  Data Pedido
-                </p>
-
-                <p className="mt-1">
-                  {pedido.dataPedido || "-"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-zinc-500 text-sm">
-                  Data Email
-                </p>
-
-                <p className="mt-1">
-                  {pedido.dataEmail || "-"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-zinc-500 text-sm">
-                  Quantidade
-                </p>
-
-                <p className="mt-1">
-                  {pedido.quantidadePneus}
-                </p>
-              </div>
-            </div>
-
-            {/* Observação */}
-            <div className="mt-6 space-y-5">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm text-zinc-400">
-                  Observação
-                </label>
-
-                <textarea
-                  value={pedido.observacao}
-                  onChange={(e) => {
-                    const novosPedidos =
-                      pedidos.map((p) => {
-                        if (p.id === pedido.id) {
-                          return {
-                            ...p,
-                            observacao:
-                              e.target.value,
-                          };
-                        }
-
-                        return p;
-                      });
-
-                    setPedidos(novosPedidos);
-
-                    savePedidos(novosPedidos);
-                  }}
-                  className="
-                    w-full
-                    bg-black
-                    border
-                    border-zinc-700
-                    rounded-xl
-                    px-4
-                    py-3
-                    text-white
-                    outline-none
-                    focus:border-[#C7A6FF]
-                  "
-                />
-              </div>
-
-              {/* Checkboxes */}
-              <div className="flex gap-10">
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={pedido.prioridade}
-                    onChange={() =>
-                      togglePrioridade(
+                {/* Botões */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() =>
+                      excluirPedido(
                         pedido.id
                       )
                     }
-                  />
+                    className="
+                      bg-red-500/20
+                      hover:bg-red-500/40
+                      transition
+                      p-3
+                      rounded-xl
+                    "
+                  >
+                    <Trash2 size={18} />
+                  </button>
 
-                  Prioridade
-                </label>
+                  <button
+                    className="
+                      bg-[#C7A6FF]/20
+                      hover:bg-[#C7A6FF]/40
+                      transition
+                      p-3
+                      rounded-xl
+                    "
+                  >
+                    <Pencil size={18} />
+                  </button>
+                </div>
+              </div>
 
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={pedido.faturado}
-                    onChange={() =>
-                      toggleFaturado(
-                        pedido.id
+              {/* Dados */}
+              <div className="grid grid-cols-3 gap-5 mt-6">
+                <div>
+                  <p className="text-zinc-500 text-sm">
+                    Data Pedido
+                  </p>
+
+                  <p className="mt-1">
+                    {pedido.dataPedido ||
+                      "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-zinc-500 text-sm">
+                    Data Email
+                  </p>
+
+                  <p className="mt-1">
+                    {pedido.dataEmail ||
+                      "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-zinc-500 text-sm">
+                    Quantidade
+                  </p>
+
+                  <p className="mt-1">
+                    {
+                      pedido.quantidadePneus
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Observação */}
+              <div className="mt-6 space-y-5">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm text-zinc-400">
+                    Observação
+                  </label>
+
+                  <textarea
+                    value={
+                      pedido.observacao
+                    }
+                    onChange={(e) =>
+                      atualizarObservacao(
+                        pedido,
+                        e.target.value
                       )
                     }
+                    className="
+                      w-full
+                      bg-black
+                      border
+                      border-zinc-700
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-white
+                      outline-none
+                      focus:border-[#C7A6FF]
+                    "
                   />
+                </div>
 
-                  Faturado
-                </label>
-              </div>
+                {/* Checkboxes */}
+                <div className="flex gap-10">
+                  <label className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={
+                        pedido.prioridade
+                      }
+                      onChange={() =>
+                        togglePrioridade(
+                          pedido
+                        )
+                      }
+                    />
 
-              {/* Data Faturamento */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm text-zinc-400">
-                  Data/Hora Faturamento
-                </label>
+                    Prioridade
+                  </label>
 
-                <input
-                  type="datetime-local"
-                  value={
-                    pedido.dataFaturamento
-                  }
-                  onChange={(e) =>
-                    atualizarDataFaturamento(
-                      pedido.id,
-                      e.target.value
-                    )
-                  }
-                  className="
-                    bg-black
-                    border
-                    border-zinc-700
-                    rounded-xl
-                    px-4
-                    py-3
-                    text-white
-                    outline-none
-                    focus:border-[#C7A6FF]
-                  "
-                />
+                  <label className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={
+                        pedido.faturado
+                      }
+                      onChange={() =>
+                        toggleFaturado(
+                          pedido
+                        )
+                      }
+                    />
+
+                    Faturado
+                  </label>
+                </div>
+
+                {/* Data Faturamento */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm text-zinc-400">
+                    Data/Hora
+                    Faturamento
+                  </label>
+
+                  <input
+                    type="datetime-local"
+                    value={
+                      pedido.dataFaturamento
+                    }
+                    onChange={(e) =>
+                      atualizarDataFaturamento(
+                        pedido,
+                        e.target.value
+                      )
+                    }
+                    className="
+                      bg-black
+                      border
+                      border-zinc-700
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-white
+                      outline-none
+                      focus:border-[#C7A6FF]
+                    "
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );

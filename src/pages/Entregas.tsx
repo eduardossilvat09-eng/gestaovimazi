@@ -11,28 +11,26 @@ import type { Entrega } from "../types/Entrega";
 
 import {
   getPedidos,
+  savePedidos,
 } from "../services/pedidosStorage";
 
 import {
   getEntregas,
-  saveEntregas,
+  criarEntrega,
+  atualizarEntrega,
+  excluirEntrega,
 } from "../services/entregasStorage";
 
 type Motorista = {
   id: string;
-
   nome: string;
 };
 
 type Veiculo = {
   id: string;
-
   fabricante: string;
-
   modelo: string;
-
   capacidade: string;
-
   placa: string;
 };
 
@@ -69,37 +67,17 @@ export default function Entregas() {
 
   useEffect(() => {
     carregarTudo();
-
-    window.addEventListener(
-      "storage",
-      carregarTudo
-    );
-
-    window.addEventListener(
-      "focus",
-      carregarTudo
-    );
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        carregarTudo
-      );
-
-      window.removeEventListener(
-        "focus",
-        carregarTudo
-      );
-    };
   }, []);
 
-  function carregarTudo() {
+  async function carregarTudo() {
     const entregasStorage =
-      getEntregas();
+      await getEntregas();
 
     setEntregas(entregasStorage);
 
-    carregarPedidos(entregasStorage);
+    await carregarPedidos(
+      entregasStorage
+    );
 
     const motoristasStorage =
       localStorage.getItem(
@@ -124,10 +102,11 @@ export default function Entregas() {
     }
   }
 
-  function carregarPedidos(
+  async function carregarPedidos(
     entregasAtuais: Entrega[]
   ) {
-    const pedidos = getPedidos();
+    const pedidos =
+      await getPedidos();
 
     const pedidosComEntrega =
       entregasAtuais.map(
@@ -136,7 +115,11 @@ export default function Entregas() {
       );
 
     const faturados = pedidos.filter(
-      (pedido: any) =>
+      (
+        pedido: Pedido & {
+          entregueFinalizado?: boolean;
+        }
+      ) =>
         pedido.faturado &&
         !pedido.entregueFinalizado &&
         !pedidosComEntrega.includes(
@@ -147,7 +130,7 @@ export default function Entregas() {
     setPedidosFaturados(faturados);
   }
 
-  function criarEntrega() {
+  async function handleCriarEntrega() {
     if (
       !pedidoSelecionado ||
       !motorista ||
@@ -197,21 +180,12 @@ export default function Entregas() {
       observacao: "",
     };
 
-    const novasEntregas = [
-      novaEntrega,
-      ...entregas,
-    ];
+    await criarEntrega(
+      novaEntrega
+    );
 
-    setEntregas(novasEntregas);
+    await carregarTudo();
 
-    saveEntregas(novasEntregas);
-
-    carregarPedidos(novasEntregas);
-
-    limparFormulario();
-  }
-
-  function limparFormulario() {
     setPedidoSelecionado(null);
 
     setMotorista("");
@@ -221,135 +195,109 @@ export default function Entregas() {
     setDataCarregamento("");
   }
 
-  function toggleEntregue(id: string) {
-    const novasEntregas = entregas.map(
-      (entrega) => {
-        if (entrega.id === id) {
-          if (!entrega.dataEntrega) {
-            alert(
-              "Preencha a data da entrega"
-            );
-
-            return entrega;
-          }
-
-          /* MARCA pedido permanentemente */
-          const pedidos =
-            getPedidos();
-
-          const pedidosAtualizados =
-            pedidos.map(
-              (pedido: any) => {
-                if (
-                  pedido.id ===
-                  entrega.pedidoId
-                ) {
-                  return {
-                    ...pedido,
-
-                    entregueFinalizado:
-                      true,
-                  };
-                }
-
-                return pedido;
-              }
-            );
-
-          localStorage.setItem(
-            "vimazi_pedidos",
-            JSON.stringify(
-              pedidosAtualizados
-            )
-          );
-
-          return {
-            ...entrega,
-
-            entregue:
-              !entrega.entregue,
-
-            concluida:
-              !entrega.entregue,
-          };
-        }
-
-        return entrega;
-      }
-    );
-
-    setEntregas(novasEntregas);
-
-    saveEntregas(novasEntregas);
-
-    carregarPedidos(novasEntregas);
-  }
-
-  function atualizarDataEntrega(
-    id: string,
-    valor: string
+  async function toggleEntregue(
+    entrega: Entrega
   ) {
-    const novasEntregas = entregas.map(
-      (entrega) => {
-        if (entrega.id === id) {
-          return {
-            ...entrega,
-
-            dataEntrega: valor,
-          };
-        }
-
-        return entrega;
-      }
-    );
-
-    setEntregas(novasEntregas);
-
-    saveEntregas(novasEntregas);
-  }
-
-  function atualizarObservacao(
-    id: string,
-    valor: string
-  ) {
-    const novasEntregas = entregas.map(
-      (entrega) => {
-        if (entrega.id === id) {
-          return {
-            ...entrega,
-
-            observacao: valor,
-          };
-        }
-
-        return entrega;
-      }
-    );
-
-    setEntregas(novasEntregas);
-
-    saveEntregas(novasEntregas);
-  }
-
-  function excluirEntrega(id: string) {
-    const novasEntregas =
-      entregas.filter(
-        (entrega) =>
-          entrega.id !== id
+    if (!entrega.dataEntrega) {
+      alert(
+        "Preencha a data da entrega"
       );
 
-    setEntregas(novasEntregas);
+      return;
+    }
 
-    saveEntregas(novasEntregas);
+    const entregaAtualizada = {
+      ...entrega,
 
-    carregarPedidos(
-      novasEntregas
+      entregue: true,
+
+      concluida: true,
+    };
+
+    await atualizarEntrega(
+      entregaAtualizada
     );
+
+    const pedidos =
+      await getPedidos();
+
+    const pedidosAtualizados =
+      pedidos.map((pedido) => {
+        if (
+          pedido.id ===
+          entrega.pedidoId
+        ) {
+          return {
+            ...pedido,
+
+            entregueFinalizado: true,
+          };
+        }
+
+        return pedido;
+      });
+
+    await savePedidos(
+      pedidosAtualizados
+    );
+
+    await carregarTudo();
+  }
+
+  function atualizarDataEntregaLocal(
+    entrega: Entrega,
+    valor: string
+  ) {
+    setEntregas((prev) =>
+      prev.map((item) =>
+        item.id === entrega.id
+          ? {
+              ...item,
+              dataEntrega: valor,
+            }
+          : item
+      )
+    );
+  }
+
+  async function salvarDataEntrega(
+    entrega: Entrega
+  ) {
+    await atualizarEntrega(entrega);
+  }
+
+  function atualizarObservacaoLocal(
+    entrega: Entrega,
+    valor: string
+  ) {
+    setEntregas((prev) =>
+      prev.map((item) =>
+        item.id === entrega.id
+          ? {
+              ...item,
+              observacao: valor,
+            }
+          : item
+      )
+    );
+  }
+
+  async function salvarObservacao(
+    entrega: Entrega
+  ) {
+    await atualizarEntrega(entrega);
+  }
+
+  async function handleExcluirEntrega(
+    id: string
+  ) {
+    await excluirEntrega(id);
+
+    await carregarTudo();
   }
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-4xl font-bold flex items-center gap-3">
           <Truck className="text-[#F4C542]" />
@@ -362,10 +310,8 @@ export default function Entregas() {
         </p>
       </div>
 
-      {/* Formulário */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
         <div className="grid grid-cols-2 gap-5">
-          {/* Pedido */}
           <div className="flex flex-col gap-2">
             <label className="text-sm text-zinc-400">
               Pedido
@@ -388,17 +334,7 @@ export default function Entregas() {
                   pedido || null
                 );
               }}
-              className="
-                bg-black
-                border
-                border-zinc-700
-                rounded-xl
-                px-4
-                py-3
-                text-white
-                outline-none
-                focus:border-[#C7A6FF]
-              "
+              className="bg-black border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             >
               <option value="">
                 Selecione
@@ -417,7 +353,6 @@ export default function Entregas() {
             </select>
           </div>
 
-          {/* Motorista */}
           <div className="flex flex-col gap-2">
             <label className="text-sm text-zinc-400">
               Motorista
@@ -430,17 +365,7 @@ export default function Entregas() {
                   e.target.value
                 )
               }
-              className="
-                bg-black
-                border
-                border-zinc-700
-                rounded-xl
-                px-4
-                py-3
-                text-white
-                outline-none
-                focus:border-[#C7A6FF]
-              "
+              className="bg-black border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             >
               <option value="">
                 Selecione
@@ -459,7 +384,6 @@ export default function Entregas() {
             </select>
           </div>
 
-          {/* Veículo */}
           <div className="flex flex-col gap-2">
             <label className="text-sm text-zinc-400">
               Veículo
@@ -472,17 +396,7 @@ export default function Entregas() {
                   e.target.value
                 )
               }
-              className="
-                bg-black
-                border
-                border-zinc-700
-                rounded-xl
-                px-4
-                py-3
-                text-white
-                outline-none
-                focus:border-[#C7A6FF]
-              "
+              className="bg-black border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             >
               <option value="">
                 Selecione
@@ -503,7 +417,6 @@ export default function Entregas() {
             </select>
           </div>
 
-          {/* Data carregamento */}
           <div className="flex flex-col gap-2">
             <label className="text-sm text-zinc-400">
               Data/Hora Carregamento
@@ -517,58 +430,30 @@ export default function Entregas() {
                   e.target.value
                 )
               }
-              className="
-                bg-black
-                border
-                border-zinc-700
-                rounded-xl
-                px-4
-                py-3
-                text-white
-                outline-none
-                focus:border-[#C7A6FF]
-              "
+              className="bg-black border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             />
           </div>
         </div>
 
         <button
-          onClick={criarEntrega}
-          className="
-            mt-6
-            bg-[#F4C542]
-            hover:opacity-80
-            text-black
-            font-bold
-            px-6
-            py-3
-            rounded-xl
-            transition
-          "
+          onClick={handleCriarEntrega}
+          className="mt-6 bg-[#F4C542] text-black font-bold px-6 py-3 rounded-xl"
         >
           Criar Entrega
         </button>
       </div>
 
-      {/* Lista */}
       <div className="space-y-5">
         {entregas
           .filter(
             (entrega) =>
-              !entrega.concluida
+              entrega.concluida !== true
           )
           .map((entrega) => (
             <div
               key={entrega.id}
-              className="
-                bg-zinc-900
-                border
-                border-zinc-800
-                rounded-2xl
-                p-6
-              "
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"
             >
-              {/* Topo */}
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold">
@@ -580,48 +465,18 @@ export default function Entregas() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  {entrega.entregue && (
-                    <div
-                      className="
-                        flex
-                        items-center
-                        gap-2
-                        bg-green-500/20
-                        text-green-400
-                        px-4
-                        py-2
-                        rounded-full
-                      "
-                    >
-                      <CheckCircle2
-                        size={18}
-                      />
-
-                      Entregue
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() =>
-                      excluirEntrega(
-                        entrega.id
-                      )
-                    }
-                    className="
-                      bg-red-500/20
-                      hover:bg-red-500/40
-                      transition
-                      p-3
-                      rounded-xl
-                    "
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+                <button
+                  onClick={() =>
+                    handleExcluirEntrega(
+                      entrega.id
+                    )
+                  }
+                  className="bg-red-500/20 p-3 rounded-xl"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
 
-              {/* Infos */}
               <div className="grid grid-cols-4 gap-5 mt-6">
                 <div>
                   <p className="text-zinc-500 text-sm">
@@ -660,9 +515,7 @@ export default function Entregas() {
                 </div>
               </div>
 
-              {/* Controles */}
               <div className="mt-6 space-y-5">
-                {/* Data entrega */}
                 <div className="flex flex-col gap-2">
                   <label className="text-sm text-zinc-400">
                     Data/Hora Entrega
@@ -674,26 +527,20 @@ export default function Entregas() {
                       entrega.dataEntrega
                     }
                     onChange={(e) =>
-                      atualizarDataEntrega(
-                        entrega.id,
+                      atualizarDataEntregaLocal(
+                        entrega,
                         e.target.value
                       )
                     }
-                    className="
-                      bg-black
-                      border
-                      border-zinc-700
-                      rounded-xl
-                      px-4
-                      py-3
-                      text-white
-                      outline-none
-                      focus:border-[#C7A6FF]
-                    "
+                    onBlur={() =>
+                      salvarDataEntrega(
+                        entrega
+                      )
+                    }
+                    className="bg-black border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
                   />
                 </div>
 
-                {/* Observação */}
                 <div className="flex flex-col gap-2">
                   <label className="text-sm text-zinc-400">
                     Observação
@@ -704,26 +551,20 @@ export default function Entregas() {
                       entrega.observacao
                     }
                     onChange={(e) =>
-                      atualizarObservacao(
-                        entrega.id,
+                      atualizarObservacaoLocal(
+                        entrega,
                         e.target.value
                       )
                     }
-                    className="
-                      bg-black
-                      border
-                      border-zinc-700
-                      rounded-xl
-                      px-4
-                      py-3
-                      text-white
-                      outline-none
-                      focus:border-[#C7A6FF]
-                    "
+                    onBlur={() =>
+                      salvarObservacao(
+                        entrega
+                      )
+                    }
+                    className="bg-black border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
                   />
                 </div>
 
-                {/* Checkbox */}
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
@@ -732,7 +573,7 @@ export default function Entregas() {
                     }
                     onChange={() =>
                       toggleEntregue(
-                        entrega.id
+                        entrega
                       )
                     }
                   />

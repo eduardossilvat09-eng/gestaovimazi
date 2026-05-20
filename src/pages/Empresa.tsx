@@ -4,6 +4,8 @@ import {
   Building2,
   Truck,
   User,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 type Motorista = {
@@ -111,6 +113,50 @@ export default function Empresa() {
     setNomeMotorista("");
   }
 
+  function editarMotorista(
+    id: string
+  ) {
+    const motorista =
+      motoristas.find(
+        (m) => m.id === id
+      );
+
+    if (!motorista) return;
+
+    const novoNome = prompt(
+      "Editar motorista",
+      motorista.nome
+    );
+
+    if (!novoNome) return;
+
+    const lista = motoristas.map(
+      (m) =>
+        m.id === id
+          ? {
+              ...m,
+              nome: novoNome,
+            }
+          : m
+    );
+
+    setMotoristas(lista);
+
+    salvarMotoristas(lista);
+  }
+
+  function excluirMotorista(
+    id: string
+  ) {
+    const lista = motoristas.filter(
+      (m) => m.id !== id
+    );
+
+    setMotoristas(lista);
+
+    salvarMotoristas(lista);
+  }
+
   function adicionarVeiculo() {
     if (
       !fabricante ||
@@ -148,6 +194,50 @@ export default function Empresa() {
     setCapacidade("");
 
     setPlaca("");
+  }
+
+  function editarVeiculo(
+    id: string
+  ) {
+    const veiculo =
+      veiculos.find(
+        (v) => v.id === id
+      );
+
+    if (!veiculo) return;
+
+    const novoModelo = prompt(
+      "Editar modelo",
+      veiculo.modelo
+    );
+
+    if (!novoModelo) return;
+
+    const lista = veiculos.map(
+      (v) =>
+        v.id === id
+          ? {
+              ...v,
+              modelo: novoModelo,
+            }
+          : v
+    );
+
+    setVeiculos(lista);
+
+    salvarVeiculos(lista);
+  }
+
+  function excluirVeiculo(
+    id: string
+  ) {
+    const lista = veiculos.filter(
+      (v) => v.id !== id
+    );
+
+    setVeiculos(lista);
+
+    salvarVeiculos(lista);
   }
 
   return (
@@ -224,9 +314,48 @@ export default function Empresa() {
                 border-zinc-800
                 rounded-xl
                 p-4
+                flex
+                items-center
+                justify-between
               "
             >
-              {motorista.nome}
+              <p>{motorista.nome}</p>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    editarMotorista(
+                      motorista.id
+                    )
+                  }
+                  className="
+                    bg-blue-500/20
+                    hover:bg-blue-500/40
+                    transition
+                    p-2
+                    rounded-lg
+                  "
+                >
+                  <Pencil size={16} />
+                </button>
+
+                <button
+                  onClick={() =>
+                    excluirMotorista(
+                      motorista.id
+                    )
+                  }
+                  className="
+                    bg-red-500/20
+                    hover:bg-red-500/40
+                    transition
+                    p-2
+                    rounded-lg
+                  "
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -243,7 +372,6 @@ export default function Empresa() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* Fabricante */}
           <input
             type="text"
             placeholder="Fabricante"
@@ -266,7 +394,6 @@ export default function Empresa() {
             "
           />
 
-          {/* Modelo */}
           <input
             type="text"
             placeholder="Modelo"
@@ -289,7 +416,6 @@ export default function Empresa() {
             "
           />
 
-          {/* Placa */}
           <input
             type="text"
             placeholder="Placa"
@@ -312,7 +438,6 @@ export default function Empresa() {
             "
           />
 
-          {/* Capacidade */}
           <select
             value={capacidade}
             onChange={(e) =>
@@ -378,17 +503,57 @@ export default function Empresa() {
                 p-5
               "
             >
-              <h3 className="font-bold text-lg">
-                {veiculo.fabricante}
-              </h3>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-lg">
+                    {veiculo.fabricante}
+                  </h3>
 
-              <p className="text-zinc-400 mt-1">
-                {veiculo.modelo}
-              </p>
+                  <p className="text-zinc-400 mt-1">
+                    {veiculo.modelo}
+                  </p>
 
-              <p className="text-zinc-500 mt-2">
-                🚛 {veiculo.placa}
-              </p>
+                  <p className="text-zinc-500 mt-2">
+                    🚛 {veiculo.placa}
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() =>
+                      editarVeiculo(
+                        veiculo.id
+                      )
+                    }
+                    className="
+                      bg-blue-500/20
+                      hover:bg-blue-500/40
+                      transition
+                      p-2
+                      rounded-lg
+                    "
+                  >
+                    <Pencil size={16} />
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      excluirVeiculo(
+                        veiculo.id
+                      )
+                    }
+                    className="
+                      bg-red-500/20
+                      hover:bg-red-500/40
+                      transition
+                      p-2
+                      rounded-lg
+                    "
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
 
               <div
                 className="

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import {
   CheckCircle2,
+  Truck,
   Trash2,
 } from "lucide-react";
 
@@ -9,37 +10,48 @@ import type { Entrega } from "../types/Entrega";
 
 import {
   getEntregas,
-  saveEntregas,
+  excluirEntrega,
 } from "../services/entregasStorage";
 
 export default function Concluidos() {
-  const [concluidos, setConcluidos] =
+  const [entregas, setEntregas] =
     useState<Entrega[]>([]);
 
   useEffect(() => {
-    carregarConcluidos();
+    carregarEntregas();
+
+    window.addEventListener(
+      "focus",
+      carregarEntregas
+    );
+
+    return () => {
+      window.removeEventListener(
+        "focus",
+        carregarEntregas
+      );
+    };
   }, []);
 
-  function carregarConcluidos() {
-    const entregas = getEntregas();
+  async function carregarEntregas() {
+    const entregasStorage =
+      await getEntregas();
 
-    const lista = entregas.filter(
-      (entrega) => entrega.concluida
-    );
+    const concluidas =
+      entregasStorage.filter(
+        (entrega) =>
+          entrega.concluida === true
+      );
 
-    setConcluidos(lista);
+    setEntregas(concluidas);
   }
 
-  function excluirConclusao(id: string) {
-    const entregas = getEntregas();
+  async function handleExcluir(
+    id: string
+  ) {
+    await excluirEntrega(id);
 
-    const novaLista = entregas.filter(
-      (entrega) => entrega.id !== id
-    );
-
-    saveEntregas(novaLista);
-
-    carregarConcluidos();
+    await carregarEntregas();
   }
 
   return (
@@ -53,13 +65,39 @@ export default function Concluidos() {
         </h1>
 
         <p className="text-zinc-400 mt-1">
-          Histórico de entregas finalizadas
+          Entregas finalizadas
         </p>
       </div>
 
       {/* Lista */}
       <div className="space-y-5">
-        {concluidos.map((entrega) => (
+        {entregas.length === 0 && (
+          <div
+            className="
+              bg-zinc-900
+              border
+              border-zinc-800
+              rounded-2xl
+              p-10
+              text-center
+            "
+          >
+            <Truck
+              className="
+                mx-auto
+                mb-4
+                text-zinc-600
+              "
+              size={40}
+            />
+
+            <p className="text-zinc-400">
+              Nenhuma entrega concluída
+            </p>
+          </div>
+        )}
+
+        {entregas.map((entrega) => (
           <div
             key={entrega.id}
             className="
@@ -70,7 +108,6 @@ export default function Concluidos() {
               p-6
             "
           >
-            {/* Topo */}
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-2xl font-bold">
@@ -85,24 +122,26 @@ export default function Concluidos() {
               <div className="flex items-center gap-3">
                 <div
                   className="
+                    flex
+                    items-center
+                    gap-2
                     bg-green-500/20
                     text-green-400
                     px-4
                     py-2
                     rounded-full
-                    flex
-                    items-center
-                    gap-2
                   "
                 >
-                  <CheckCircle2 size={18} />
+                  <CheckCircle2
+                    size={18}
+                  />
 
-                  Finalizado
+                  Concluído
                 </div>
 
                 <button
                   onClick={() =>
-                    excluirConclusao(
+                    handleExcluir(
                       entrega.id
                     )
                   }
@@ -119,17 +158,7 @@ export default function Concluidos() {
               </div>
             </div>
 
-            {/* Informações */}
-            <div
-              className="
-                grid
-                grid-cols-2
-                md:grid-cols-3
-                lg:grid-cols-6
-                gap-5
-                mt-6
-              "
-            >
+            <div className="grid grid-cols-4 gap-5 mt-6">
               <div>
                 <p className="text-zinc-500 text-sm">
                   Motorista
@@ -152,30 +181,7 @@ export default function Concluidos() {
                 </p>
 
                 <p>
-                  {entrega.dataEntrega ||
-                    "-"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-zinc-500 text-sm">
-                  Data Pedido
-                </p>
-
-                <p>
-                  {entrega.dataPedido ||
-                    "-"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-zinc-500 text-sm">
-                  Data Email
-                </p>
-
-                <p>
-                  {entrega.dataEmail ||
-                    "-"}
+                  {entrega.dataEntrega}
                 </p>
               </div>
 
@@ -185,21 +191,32 @@ export default function Concluidos() {
                 </p>
 
                 <p>
-                  {entrega.quantidadePneus}
+                  {
+                    entrega.quantidadePneus
+                  }
                 </p>
               </div>
             </div>
 
-            {/* Observação */}
-            <div className="mt-5">
-              <p className="text-zinc-500 text-sm">
-                Observação
-              </p>
+            {entrega.observacao && (
+              <div className="mt-5">
+                <p className="text-zinc-500 text-sm mb-2">
+                  Observação
+                </p>
 
-              <p className="mt-2">
-                {entrega.observacao || "-"}
-              </p>
-            </div>
+                <div
+                  className="
+                    bg-black
+                    border
+                    border-zinc-800
+                    rounded-xl
+                    p-4
+                  "
+                >
+                  {entrega.observacao}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
