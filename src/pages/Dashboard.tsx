@@ -11,6 +11,10 @@ import {
 
 import { useEffect, useState } from "react";
 
+import { getPedidos } from "../services/pedidosStorage";
+
+import { getEntregas } from "../services/entregasStorage";
+
 export default function Dashboard() {
   const [data, setData] = useState([
     {
@@ -56,29 +60,30 @@ export default function Dashboard() {
     useState("--");
 
   useEffect(() => {
-    function carregarDashboard() {
-      const pedidosStorage =
-        localStorage.getItem(
-          "vimazi_pedidos"
-        );
+    carregarDashboard();
 
-      const entregasStorage =
-        localStorage.getItem(
-          "vimazi_entregas"
-        );
+    const interval =
+      setInterval(() => {
+        carregarDashboard();
+      }, 3000);
 
-      const pedidos = pedidosStorage
-        ? JSON.parse(pedidosStorage)
-        : [];
+    return () =>
+      clearInterval(interval);
+  }, []);
 
-      const entregas = entregasStorage
-        ? JSON.parse(entregasStorage)
-        : [];
+  async function carregarDashboard() {
+    try {
+      const pedidos =
+        await getPedidos();
 
-      /* Somente entregas concluídas */
+      const entregas =
+        await getEntregas();
+
+      /* SOMENTE ENTREGAS FINALIZADAS */
       const entregasConcluidas =
         entregas.filter(
-          (e: any) => e.concluida
+          (e: any) =>
+            e.concluida === true
         );
 
       /* Cards */
@@ -173,18 +178,18 @@ export default function Dashboard() {
         "Qui",
         "Sex",
       ].map((dia) => {
-        /* Pedidos apenas concluídos */
+        /* Pedidos */
         const pedidosDia =
-          entregasConcluidas.filter(
-            (entrega: any) => {
+          pedidos.filter(
+            (pedido: any) => {
               if (
-                !entrega.dataPedido
+                !pedido.dataPedido
               )
                 return false;
 
               const dataPedido =
                 new Date(
-                  entrega.dataPedido
+                  pedido.dataPedido
                 );
 
               return (
@@ -195,7 +200,7 @@ export default function Dashboard() {
             }
           ).length;
 
-        /* Entregas apenas concluídas */
+        /* Entregas FINALIZADAS */
         const entregasDia =
           entregasConcluidas.filter(
             (entrega: any) => {
@@ -236,6 +241,9 @@ export default function Dashboard() {
 
       entregasConcluidas.forEach(
         (entrega: any) => {
+          if (!entrega.cliente)
+            return;
+
           clientesMap[
             entrega.cliente
           ] =
@@ -267,6 +275,9 @@ export default function Dashboard() {
 
       entregasConcluidas.forEach(
         (entrega: any) => {
+          if (!entrega.motorista)
+            return;
+
           motoristasMap[
             entrega.motorista
           ] =
@@ -289,32 +300,10 @@ export default function Dashboard() {
       setTopMotoristas(
         motoristasOrdenados
       );
+    } catch (error) {
+      console.log(error);
     }
-
-    carregarDashboard();
-
-    window.addEventListener(
-      "storage",
-      carregarDashboard
-    );
-
-    window.addEventListener(
-      "focus",
-      carregarDashboard
-    );
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        carregarDashboard
-      );
-
-      window.removeEventListener(
-        "focus",
-        carregarDashboard
-      );
-    };
-  }, []);
+  }
 
   return (
     <div className="space-y-8">
